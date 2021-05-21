@@ -9,27 +9,31 @@ package com.zr.netty.rpc;
 import com.zr.netty.rpcdemo.proxy.MyProxy;
 import com.zr.netty.rpcdemo.rpc.Dispatcher;
 import com.zr.netty.rpcdemo.rpc.protocol.MyContent;
-import com.zr.netty.rpcdemo.rpc.protocol.MyHeader;
 import com.zr.netty.rpcdemo.rpc.service.Car;
 import com.zr.netty.rpcdemo.rpc.service.Fly;
 import com.zr.netty.rpcdemo.rpc.service.Person;
 import com.zr.netty.rpcdemo.rpc.service.impl.MyCar;
 import com.zr.netty.rpcdemo.rpc.service.impl.MyFly;
-import com.zr.netty.rpcdemo.rpc.transport.ServerDecode;
-import com.zr.netty.rpcdemo.rpc.transport.ServerRequestHandler;
+import com.zr.netty.rpcdemo.rpc.transport.MyHttpRpcHandler;
 import com.zr.netty.rpcdemo.rpc.util.SerDerUtil;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.*;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.junit.jupiter.api.Test;
-import sun.net.httpserver.HttpsServerImpl;
 
+import javax.servlet.ServletException;
+import javax.servlet.ServletInputStream;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -129,6 +133,29 @@ public class MyRPCTest {
 
     }
 
+    @Test
+    public void startHttpServer() {
+
+        MyCar car = new MyCar();
+        MyFly fly = new MyFly();
+        Dispatcher dis = Dispatcher.getDis();
+        dis.register(Car.class.getName(), car);
+        dis.register(Fly.class.getName(), fly);
+
+        // tomcat jetty [servlet]
+        Server server = new Server(new InetSocketAddress("localhost", 9090));
+        ServletContextHandler handler = new ServletContextHandler(server, "/");
+        server.setHandler(handler);
+        handler.addServlet(MyHttpRpcHandler.class, "/*"); // web.xml
+
+        try {
+            server.start();
+            server.join();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     // 模拟consumer端
     @Test
     public void get() {
@@ -168,4 +195,5 @@ public class MyRPCTest {
         Person zhangsan = car.oxox("zhangsan", 16);
         System.out.println(zhangsan);
     }
+
 }
